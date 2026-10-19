@@ -284,12 +284,12 @@ export function drawScene(
 
   ctx.clearRect(0, 0, width, height);
   drawGrid(ctx, art, projector, camX, camY, worldW, worldH, scene.scroll);
-  drawBounds(ctx, projector, camX, camY, worldW, worldH);
 
   for (const obstacle of scene.obstacles) {
     if (!obstacle.alive) continue;
     drawObstacle(ctx, art, projector, obstacle.kind, sampleObstacleY(obstacle, scene.alpha), scene.debug);
   }
+  drawBounds(ctx, projector, camX, camY, worldW, worldH);
 
   if (showPieces) {
     const bar = connectorBox(pose.left, pose.right);

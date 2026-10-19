@@ -39,8 +39,11 @@ export const VIEW_HEIGHT = ORTHO_SIZE * 2;
 /** Play span that must stay on screen, walls included. */
 export const MIN_VIEW_WIDTH = 10.4;
 
-/** Inner face of the side bounds. Pieces and blades stay inside this lane. */
-export const BOUND_X = 4.55;
+/**
+ * Inner face of the side bounds. The single-spike sprite base lands at ±3.66,
+ * and the split pieces end there too, so the walls meet the art.
+ */
+export const BOUND_X = 3.66;
 
 /** BackgroundNavyGridSprite is 512px at 204.8 pixels per unit. */
 export const GRID_TILE = 512 / 204.8;
@@ -156,7 +159,8 @@ export const SHAPES: Record<ObstacleKind, ObstacleShape> = {
       art: "spike" as const,
       x: side * 3.7 * 0.72,
       y: 0,
-      w: side * SPIKE_W * 0.72 * 0.57,
+      // Left child is unflipped so its base sits on the left wall. Right child is mirrored.
+      w: -side * SPIKE_W * 0.72 * 0.57,
       h: SPIKE_H * 0.72 * 0.53,
     })),
     bottom: 0,
