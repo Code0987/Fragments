@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a2636" />
+    <title>Fragments</title>
+    <link rel="icon" href="./favicon.png" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #1a2636;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+      <p id="score" hidden>0</p>
+      <p id="coach" hidden>Slide to a side. Space, or both sides, splits the pair.</p>
+      <button id="mute" type="button" aria-label="Mute" aria-pressed="false">
+        <img id="mute-icon" alt="" src="./sprites/sound.png" />
+      </button>
+    </div>
+    <div id="menu" class="show">
+      <div class="card">
+        <img class="logo" src="./sprites/logo.png" alt="" />
+        <h1 id="title">FRAGMENTS</h1>
+        <p id="blurb"></p>
+        <button id="play" type="button" aria-label="Play">
+          <img src="./sprites/play.png" alt="" />
+        </button>
+        <p class="hint">Hold the left or right half of the screen. Touch both halves, or press Space, to split.</p>
+      </div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
