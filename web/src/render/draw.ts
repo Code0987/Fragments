@@ -1,4 +1,5 @@
 import {
+  BOUND_X,
   CAMERA_Y,
   cameraX,
   GRID_TILE,
@@ -167,6 +168,27 @@ function drawGrid(
   }
 }
 
+function drawBounds(
+  ctx: CanvasRenderingContext2D,
+  projector: Projector,
+  camX: number,
+  camY: number,
+  worldW: number,
+  worldH: number,
+): void {
+  const edge = camX - worldW / 2 - 2;
+  const far = camX + worldW / 2 + 2;
+  const height = worldH + 4;
+  const leftWidth = -BOUND_X - edge;
+  const rightWidth = far - BOUND_X;
+  ctx.fillStyle = "rgba(8, 9, 10, 0.9)";
+  fillWorldRect(ctx, projector, { cx: (edge - BOUND_X) / 2, cy: camY, w: leftWidth, h: height });
+  fillWorldRect(ctx, projector, { cx: (BOUND_X + far) / 2, cy: camY, w: rightWidth, h: height });
+  ctx.fillStyle = "rgba(232, 236, 242, 0.55)";
+  fillWorldRect(ctx, projector, { cx: -BOUND_X, cy: camY, w: 0.045, h: height });
+  fillWorldRect(ctx, projector, { cx: BOUND_X, cy: camY, w: 0.045, h: height });
+}
+
 function drawSprite(
   ctx: CanvasRenderingContext2D,
   projector: Projector,
@@ -262,6 +284,7 @@ export function drawScene(
 
   ctx.clearRect(0, 0, width, height);
   drawGrid(ctx, art, projector, camX, camY, worldW, worldH, scene.scroll);
+  drawBounds(ctx, projector, camX, camY, worldW, worldH);
 
   for (const obstacle of scene.obstacles) {
     if (!obstacle.alive) continue;

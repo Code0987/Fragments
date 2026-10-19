@@ -39,6 +39,9 @@ export const VIEW_HEIGHT = ORTHO_SIZE * 2;
 /** Play span that must stay on screen, walls included. */
 export const MIN_VIEW_WIDTH = 10.4;
 
+/** Inner face of the side bounds. Pieces and blades stay inside this lane. */
+export const BOUND_X = 4.55;
+
 /** BackgroundNavyGridSprite is 512px at 204.8 pixels per unit. */
 export const GRID_TILE = 512 / 204.8;
 
