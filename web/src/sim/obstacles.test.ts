@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TARGETS, hits } from "./layout";
+import { PLAYER_Y, TARGETS, hits } from "./layout";
 import {
   alerts,
   createField,
@@ -51,35 +51,21 @@ describe("SpecialQueue", () => {
 });
 
 describe("obstacle geometry", () => {
-  const safe: Record<string, InputType> = {
-    "1": "right",
-    "2": "left",
-    "3": "none",
-    "4": "both",
-    "5:0": "left",
-    "5:1": "right",
-    "5:2": "none",
+  const safe: Record<ObstacleKind, InputType[]> = {
+    1: ["right"],
+    2: ["left"],
+    3: ["none"],
+    4: ["left", "right", "both"],
+    5: ["none"],
   };
   const inputs: InputType[] = ["none", "left", "right", "both"];
 
-  function cases(): Array<[ObstacleKind, number, string]> {
-    return [
-      [1, 0, "1"],
-      [2, 0, "2"],
-      [3, 0, "3"],
-      [4, 0, "4"],
-      [5, 0, "5:0"],
-      [5, 1, "5:1"],
-      [5, 2, "5:2"],
-    ];
-  }
-
-  it("kills every stance except the one that fits the gap", () => {
-    for (const [kind, variant, key] of cases()) {
+  it("matches the prefab colliders at the player line", () => {
+    for (const kind of [1, 2, 3, 4, 5] as const) {
       for (const input of inputs) {
         const pose = TARGETS[input];
-        const dead = hits(pose.left, pose.right, kind, variant, 0);
-        expect(dead, `${key} vs ${input}`).toBe(input !== safe[key]);
+        const dead = hits(pose.left, pose.right, kind, 0, PLAYER_Y);
+        expect(dead, `${kind} vs ${input}`).toBe(!safe[kind].includes(input));
       }
     }
   });

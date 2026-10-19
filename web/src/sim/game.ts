@@ -63,7 +63,7 @@ function kill(game: GameState): void {
 
 export function step(game: GameState, input: InputType, dt: number): void {
   if (game.phase === "menu" || game.phase === "dead") {
-    game.scroll += 0.35 * dt;
+    game.scroll += 0.2 * dt;
     game.shake = 0;
     return;
   }
@@ -71,7 +71,7 @@ export function step(game: GameState, input: InputType, dt: number): void {
   if (game.phase === "playing") {
     game.speed += dt / 7;
     game.runTime += dt;
-    game.scroll += game.speed * dt;
+    game.scroll += 0.2 * dt;
     stepPlayer(game.player, input, dt);
     stepField(game.field, game.speed, dt, game.rng, true, (obstacle) => {
       game.score += clearedScore(game.speed, obstacle.kind);
@@ -87,7 +87,7 @@ export function step(game: GameState, input: InputType, dt: number): void {
     return;
   }
 
-  game.scroll += game.speed * dt;
+  game.scroll += 0.2 * dt;
   stepField(game.field, game.speed, dt, game.rng, false, () => {});
   game.deathTimer -= dt;
   game.shake = Math.max(0, game.deathTimer / DEATH_TIME);

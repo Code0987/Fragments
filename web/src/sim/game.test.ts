@@ -13,13 +13,10 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function answer(kind: ObstacleKind, variant: number): InputType {
+function answer(kind: ObstacleKind): InputType {
   if (kind === 1) return "right";
   if (kind === 2) return "left";
-  if (kind === 3) return "none";
   if (kind === 4) return "both";
-  if (variant === 0) return "left";
-  if (variant === 1) return "right";
   return "none";
 }
 
@@ -49,7 +46,7 @@ describe("game", () => {
         const threat = game.field.items
           .filter((item) => item.alive && !item.scored)
           .sort((a, b) => a.y - b.y)[0];
-        if (threat) input = answer(threat.kind, threat.variant);
+        if (threat) input = answer(threat.kind);
         step(game, input, FIXED_DT);
         if (game.phase !== "playing") break;
       }

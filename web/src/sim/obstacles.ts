@@ -1,4 +1,4 @@
-import { hasCleared, OBSTACLE_H, RECYCLE_Y, SPAWN_Y } from "./layout";
+import { hasCleared, RECYCLE_Y, SHAPES, SPAWN_Y } from "./layout";
 import type { ObstacleKind } from "./types";
 import { isKind } from "./types";
 
@@ -108,11 +108,11 @@ export function stepField(
     if (!obstacle.alive) continue;
     obstacle.prevY = obstacle.y;
     obstacle.y -= speed * dt;
-    if (!obstacle.scored && hasCleared(obstacle.y)) {
+    if (!obstacle.scored && hasCleared(obstacle.kind, obstacle.y)) {
       obstacle.scored = true;
       onClear(obstacle);
     }
-    if (obstacle.y + OBSTACLE_H / 2 < RECYCLE_Y) obstacle.alive = false;
+    if (obstacle.y + SHAPES[obstacle.kind].bottom < RECYCLE_Y) obstacle.alive = false;
   }
   if (!allowSpawn) return;
   if (field.wait > 0) field.wait -= dt;

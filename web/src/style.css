@@ -6,7 +6,7 @@
 
 :root {
   color: #f4f7fb;
-  background: #1a2636;
+  background: #313233;
   font-family: "Segoe UI", "Ubuntu", sans-serif;
 }
 
@@ -19,7 +19,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #1a2636;
+  background: #313233;
   touch-action: none;
   user-select: none;
 }

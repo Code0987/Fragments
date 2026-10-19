@@ -1,15 +1,19 @@
 import {
+  CAMERA_Y,
   cameraX,
-  obstacleRects,
+  GRID_TILE,
   PIECE_HIT,
   PIECE_VISUAL,
   PLAYER_Y,
+  SHAPES,
   viewSize,
+  worldPolys,
   type Rect,
+  type Vec,
 } from "../sim/layout";
 import { sampleObstacleY, type Obstacle } from "../sim/obstacles";
 import { samplePlayer, type Player } from "../sim/player";
-import type { Phase } from "../sim/types";
+import type { ObstacleKind, Phase } from "../sim/types";
 
 export interface Art {
   player: CanvasImageSource | null;
@@ -38,6 +42,7 @@ interface Particle {
   life: number;
   max: number;
   size: number;
+  color: string;
 }
 
 export class Effects {
@@ -57,38 +62,38 @@ export class Effects {
       bit.y += bit.vy * dt;
       bit.vy -= 9 * dt;
     }
-    this.bits = this.bits.filter((p) => p.life > 0);
+    this.bits = this.bits.filter((particle) => particle.life > 0);
   }
 
   grind(x: number, y: number, outward: number): void {
-    if (this.sparks.length > 48) this.sparks.splice(0, this.sparks.length - 48);
-    for (let i = 0; i < 2; i++) {
-      this.sparks.push({
-        x,
-        y: y + (Math.random() - 0.5) * 0.4,
-        vx: outward * (1.2 + Math.random()),
-        vy: 1.5 + Math.random() * 2.2,
-        life: 0.12 + Math.random() * 0.12,
-        max: 0.24,
-        size: 0.05 + Math.random() * 0.06,
-      });
-    }
+    if (this.sparks.length > 40) this.sparks.splice(0, this.sparks.length - 40);
+    this.sparks.push({
+      x,
+      y: y + (Math.random() - 0.5) * 0.7,
+      vx: outward * (0.6 + Math.random() * 1.4),
+      vy: (Math.random() - 0.35) * 2.4,
+      life: 0.18 + Math.random() * 0.16,
+      max: 0.34,
+      size: 0.07 + Math.random() * 0.08,
+      color: Math.random() > 0.45 ? "#ff9a1f" : "#fff4d2",
+    });
   }
 
   explode(left: number, right: number, y: number): void {
     this.bits = [];
     for (const x of [left, right]) {
-      for (let i = 0; i < 16; i++) {
+      for (let i = 0; i < 18; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 1.5 + Math.random() * 4.5;
+        const speed = 1.4 + Math.random() * 4.2;
         this.bits.push({
           x,
           y,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
-          life: 0.35 + Math.random() * 0.4,
-          max: 0.75,
-          size: 0.08 + Math.random() * 0.14,
+          life: 0.4 + Math.random() * 0.45,
+          max: 0.85,
+          size: 0.1 + Math.random() * 0.16,
+          color: Math.random() > 0.5 ? "#ff3b30" : "#ffb703",
         });
       }
     }
@@ -116,72 +121,123 @@ function makeProjector(
   };
 }
 
-function fillRect(ctx: CanvasRenderingContext2D, projector: Projector, rect: Rect): void {
+function fillWorldRect(ctx: CanvasRenderingContext2D, projector: Projector, rect: Rect): void {
   const w = projector.s(rect.w);
   const h = projector.s(rect.h);
   ctx.fillRect(projector.x(rect.cx) - w / 2, projector.y(rect.cy) - h / 2, w, h);
 }
 
-function strokeHazard(ctx: CanvasRenderingContext2D, projector: Projector, rect: Rect): void {
-  const w = projector.s(rect.w);
-  const h = projector.s(rect.h);
-  const x = projector.x(rect.cx) - w / 2;
-  const y = projector.y(rect.cy) - h / 2;
-  ctx.fillStyle = "#10141c";
-  ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = "rgba(244, 247, 251, 0.92)";
-  ctx.lineWidth = Math.max(1.5, projector.s(0.045));
-  ctx.strokeRect(x + ctx.lineWidth / 2, y + ctx.lineWidth / 2, w - ctx.lineWidth, h - ctx.lineWidth);
-  const shine = ctx.createLinearGradient(x, y, x, y + h);
-  shine.addColorStop(0, "rgba(255,255,255,0.16)");
-  shine.addColorStop(0.45, "rgba(255,255,255,0)");
-  ctx.fillStyle = shine;
-  ctx.fillRect(x, y, w, h * 0.5);
+function tracePoly(ctx: CanvasRenderingContext2D, projector: Projector, points: Vec[]): void {
+  ctx.beginPath();
+  points.forEach((point, index) => {
+    const x = projector.x(point.x);
+    const y = projector.y(point.y);
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
 }
 
 function drawGrid(
   ctx: CanvasRenderingContext2D,
   art: Art,
   projector: Projector,
+  camX: number,
   camY: number,
   worldW: number,
   worldH: number,
   scroll: number,
 ): void {
-  const tile = 4;
-  const left = -worldW / 2 - tile;
-  const right = worldW / 2 + tile;
+  ctx.fillStyle = "#313233";
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  if (!art.grid) return;
+  const tile = GRID_TILE;
+  const left = camX - worldW / 2 - tile;
+  const right = camX + worldW / 2 + tile;
   const bottom = camY - worldH / 2 - tile;
   const top = camY + worldH / 2 + tile;
   const offset = scroll % tile;
-  if (art.grid) {
-    for (let y = bottom - offset; y < top; y += tile) {
-      for (let x = left; x < right; x += tile) {
-        const px = projector.x(x);
-        const py = projector.y(y + tile);
-        const size = projector.s(tile) + 0.5;
-        ctx.drawImage(art.grid, px, py, size, size);
-      }
+  for (let y = bottom - offset; y < top; y += tile) {
+    for (let x = left - ((left % tile) + tile); x < right; x += tile) {
+      const px = projector.x(x);
+      const py = projector.y(y + tile);
+      const size = projector.s(tile) + 0.5;
+      ctx.drawImage(art.grid, px, py, size, size);
     }
-    return;
   }
-  ctx.fillStyle = "#1a2636";
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
-function drawConnector(
+function drawSprite(
   ctx: CanvasRenderingContext2D,
   projector: Projector,
-  left: number,
-  right: number,
+  image: CanvasImageSource,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
 ): void {
+  const px = projector.x(cx);
+  const py = projector.y(cy);
+  const dw = projector.s(Math.abs(w));
+  const dh = projector.s(h);
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.scale(w < 0 ? -1 : 1, 1);
+  ctx.drawImage(image, -dw / 2, -dh / 2, dw, dh);
+  ctx.restore();
+}
+
+function connectorBox(left: number, right: number): Rect | null {
   const distance = Math.max(0, right - left);
-  const length = 1.13 * (distance - 0.9);
-  if (length <= 0.05) return;
-  const thickness = Math.max(0.1, (1 - 0.081 * distance) * 0.42);
-  const rect = { cx: (left + right) / 2, cy: PLAYER_Y, w: length, h: thickness };
-  ctx.fillStyle = "rgba(232, 238, 246, 0.92)";
-  fillRect(ctx, projector, rect);
+  const scaleX = 1.13 * (distance - 0.9);
+  const scaleY = 1 - 0.081 * distance;
+  if (scaleX <= 0.02) return null;
+  return {
+    cx: (left + right) / 2,
+    cy: PLAYER_Y,
+    w: scaleX * PIECE_VISUAL,
+    h: Math.max(0.08, scaleY) * PIECE_VISUAL,
+  };
+}
+
+function drawObstacle(
+  ctx: CanvasRenderingContext2D,
+  art: Art,
+  projector: Projector,
+  kind: ObstacleKind,
+  y: number,
+  debug: boolean,
+): void {
+  const shape = SHAPES[kind];
+  const polys = worldPolys(kind, y);
+  if (kind === 5) {
+    ctx.fillStyle = "#111111";
+    for (const poly of polys) {
+      tracePoly(ctx, projector, poly);
+      ctx.fill();
+    }
+  }
+  for (const slot of shape.sprites) {
+    const image = slot.art === "diamond" ? art.diamond : art.spike;
+    const cx = slot.x + shape.anchorX;
+    const cy = slot.y + y;
+    if (image) drawSprite(ctx, projector, image, cx, cy, slot.w, slot.h);
+    else {
+      ctx.fillStyle = "#212121";
+      for (const poly of polys) {
+        tracePoly(ctx, projector, poly);
+        ctx.fill();
+      }
+    }
+  }
+  if (debug) {
+    ctx.strokeStyle = "#ff4d6a";
+    ctx.lineWidth = 1;
+    for (const poly of polys) {
+      tracePoly(ctx, projector, poly);
+      ctx.stroke();
+    }
+  }
 }
 
 export function drawScene(
@@ -201,65 +257,47 @@ export function drawScene(
   const { worldW, worldH } = viewSize(width / Math.max(height, 1));
   const shake = scene.phase === "dying" ? scene.shake : 0;
   const camX = cameraX(pose.left, pose.right) + Math.sin(time * 48) * 0.16 * shake;
-  const camY = Math.cos(time * 37) * 0.1 * shake;
+  const camY = CAMERA_Y + Math.cos(time * 37) * 0.1 * shake;
   const projector = makeProjector(camX, camY, worldW, worldH, width, height);
 
   ctx.clearRect(0, 0, width, height);
-  drawGrid(ctx, art, projector, camY, worldW, worldH, scene.scroll);
-
-  ctx.fillStyle = "rgba(8, 12, 18, 0.55)";
-  fillRect(ctx, projector, { cx: -4.28, cy: 0, w: 0.16, h: 40 });
-  fillRect(ctx, projector, { cx: 4.28, cy: 0, w: 0.16, h: 40 });
+  drawGrid(ctx, art, projector, camX, camY, worldW, worldH, scene.scroll);
 
   for (const obstacle of scene.obstacles) {
     if (!obstacle.alive) continue;
-    const y = sampleObstacleY(obstacle, scene.alpha);
-    for (const rect of obstacleRects(obstacle.kind, obstacle.variant, y)) {
-      strokeHazard(ctx, projector, rect);
-      if (obstacle.kind === 4 && art.diamond) {
-        const size = projector.s(Math.min(rect.w, rect.h) * 0.92);
-        ctx.drawImage(art.diamond, projector.x(rect.cx) - size / 2, projector.y(rect.cy) - size / 2, size, size);
-      } else if ((obstacle.kind === 1 || obstacle.kind === 2 || obstacle.kind === 3) && art.spike) {
-        const w = projector.s(rect.w);
-        const h = projector.s(rect.h);
-        const x = projector.x(rect.cx) - w / 2;
-        const yPx = projector.y(rect.cy) - h / 2;
-        ctx.save();
-        ctx.globalAlpha = 0.55;
-        ctx.drawImage(art.spike, x, yPx, w, h);
-        ctx.restore();
-      }
-      if (scene.debug) {
-        ctx.save();
-        ctx.strokeStyle = "#ff4d6a";
-        ctx.lineWidth = 1;
-        const w = projector.s(rect.w);
-        const h = projector.s(rect.h);
-        ctx.strokeRect(projector.x(rect.cx) - w / 2, projector.y(rect.cy) - h / 2, w, h);
-        ctx.restore();
-      }
+    drawObstacle(ctx, art, projector, obstacle.kind, sampleObstacleY(obstacle, scene.alpha), scene.debug);
+  }
+
+  if (showPieces) {
+    const bar = connectorBox(pose.left, pose.right);
+    if (bar) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+      fillWorldRect(ctx, projector, bar);
     }
   }
 
-  if (showPieces) drawConnector(ctx, projector, pose.left, pose.right);
-
   for (const spark of fx.sparks) {
     ctx.globalAlpha = Math.max(0, spark.life / spark.max);
-    ctx.fillStyle = "#f4f7fb";
-    fillRect(ctx, projector, { cx: spark.x, cy: spark.y, w: spark.size, h: spark.size * 1.8 });
+    ctx.fillStyle = spark.color;
+    fillWorldRect(ctx, projector, { cx: spark.x, cy: spark.y, w: spark.size, h: spark.size });
     ctx.globalAlpha = 1;
   }
 
   if (showPieces) {
     for (const x of [pose.left, pose.right]) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+      fillWorldRect(ctx, projector, {
+        cx: x,
+        cy: PLAYER_Y,
+        w: PIECE_VISUAL * 1.12,
+        h: PIECE_VISUAL * 1.12,
+      });
       const size = projector.s(PIECE_VISUAL);
       const px = projector.x(x) - size / 2;
       const py = projector.y(PLAYER_Y) - size / 2;
-      ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
-      ctx.fillRect(px + size * 0.08, py + size * 0.1, size, size);
       if (art.player) ctx.drawImage(art.player, px, py, size, size);
       else {
-        ctx.fillStyle = "#f4f7fb";
+        ctx.fillStyle = "#f9f9f9";
         ctx.fillRect(px, py, size, size);
       }
       if (scene.debug) {
@@ -273,18 +311,10 @@ export function drawScene(
 
   for (const bit of fx.bits) {
     ctx.globalAlpha = Math.max(0, bit.life / bit.max);
-    ctx.fillStyle = "#f7f8fa";
-    fillRect(ctx, projector, { cx: bit.x, cy: bit.y, w: bit.size, h: bit.size });
+    ctx.fillStyle = bit.color;
+    fillWorldRect(ctx, projector, { cx: bit.x, cy: bit.y, w: bit.size, h: bit.size });
     ctx.globalAlpha = 1;
   }
-
-  const vignette = ctx.createLinearGradient(0, 0, 0, height);
-  vignette.addColorStop(0, "rgba(12, 18, 28, 0.45)");
-  vignette.addColorStop(0.14, "rgba(12, 18, 28, 0)");
-  vignette.addColorStop(0.86, "rgba(12, 18, 28, 0)");
-  vignette.addColorStop(1, "rgba(12, 18, 28, 0.5)");
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, width, height);
 }
 
 export function grinding(left: number, right: number): { x: number; outward: number }[] {
